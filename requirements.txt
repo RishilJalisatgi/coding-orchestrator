@@ -1,0 +1,12 @@
+# The orchestrator itself uses only the Python standard library (3.10+).
+# Install ONLY the SDKs of the providers you actually use:
+anthropic>=0.40        # Claude
+openai>=1.50           # GPT
+google-genai>=1.0      # Gemini (NOT the deprecated google-generativeai)
+# Local models (Ollama) need no package: install Ollama and run `ollama serve`.
+
+# Optional: used to evaluate generated code. Skipped automatically if missing.
+pytest
+ruff
+mypy
+bandit

@@ -14,7 +14,7 @@
      "capabilities": {"coding": 7.5, "hld": 7.5, "review": 7.5},
      "token_budget_per_window": 100000, "window_seconds": 3600, "requests_per_minute": 30,
      "max_output_tokens": 8192},
-    {"id": "groq-qwen-coder", "provider": "openai", "model_name": "openai/gpt-oss-120b",
+    {"id": "groq-gptoss120b", "provider": "openai", "model_name": "openai/gpt-oss-120b",
       "api_key_env": "GROQ_API_KEY", "base_url": "https://api.groq.com/openai/v1",
       "capabilities": {"coding": 8.0, "hld": 8.0, "review": 8.0},
       "token_budget_per_window": 100000, "requests_per_minute": 30, "max_output_tokens": 8192}

@@ -36,6 +36,9 @@ DOTENV_PATH = BASE_DIR / ".env"
 # Model registry
 # --------------------------------------------------------------------------- #
 
+# Providers that use a logged-in vendor CLI (subscription) instead of an API key.
+CLI_PROVIDER_NAMES = {"claude_cli": "claude", "codex_cli": "codex"}
+
 @dataclass
 class ModelConfig:
     """Everything the orchestrator needs to know about one model."""
@@ -62,6 +65,10 @@ class ModelConfig:
     requests_per_minute: Optional[int] = None
 
     max_output_tokens: int = 4096
+
+    # Provider-specific extras, e.g. for "claude_cli" / "codex_cli":
+    #   {"cli_path": "...", "timeout_seconds": 600, "extra_args": ["--effort", "low"]}
+    options: dict = field(default_factory=dict)
 
     @property
     def is_unlimited(self) -> bool:
@@ -206,10 +213,25 @@ class Settings:
         return os.environ.get(model.api_key_env) if model.api_key_env else None
 
     def has_credentials(self, model: ModelConfig) -> bool:
-        """Local models need no key; hosted models need their env var set."""
+        """Local models need nothing; CLI providers need a logged-in CLI; hosted models need a key."""
+        return self.credential_problem(model) is None
+
+    def credential_problem(self, model: ModelConfig) -> Optional[str]:
+        """Why this model cannot be used right now (None = it can)."""
         if model.provider == "local":
-            return True
-        return bool(self.get_api_key(model))
+            return None
+        cli = CLI_PROVIDER_NAMES.get((model.provider or "").lower())
+        if cli:
+            from models.cli_common import CLI_PROVIDERS, auth_status   # lazy: avoids a circular import
+            status = auth_status(cli, (model.options or {}).get("cli_path"))
+            if status.logged_in:
+                return None
+            if not status.installed:
+                return f"{cli} CLI {status.detail}"
+            return f"not logged in: run `python main.py --login {CLI_PROVIDERS[cli].name}`"
+        if self.get_api_key(model):
+            return None
+        return f"missing API key (set {model.api_key_env})"
 
 
 # --------------------------------------------------------------------------- #

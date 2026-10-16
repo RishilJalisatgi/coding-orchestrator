@@ -45,6 +45,11 @@ Output goes to `projects/<id>/implementation/`; `final_report.md`, `architecture
 
 Each module has a self-test: `PYTHONPATH=. python -m core.orchestrator` (also `core.scheduler`, `agents.coder`, ...).
 
+## TO-DO:
+
+- UI
+- Codebase cleanup
+
 ## Notes
 
 - Generated programs are only run if they are plain terminating Python scripts; GUIs, servers and programs needing

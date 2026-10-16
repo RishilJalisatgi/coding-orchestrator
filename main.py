@@ -10,6 +10,12 @@ main.py - command line entry point of the multi-LLM coding orchestrator.
     python main.py --models                                                       # which models are usable
     python main.py --config my_config.json ...
 
+Subscription accounts (no API keys; needs the `claude` / `codex` CLIs installed):
+    python main.py --accounts                  # who is logged in?
+    python main.py --login claude|codex        # sign in (opens your browser)
+    python main.py --logout claude|codex|all   # sign out
+    python main.py --switch claude|codex       # sign out, then sign in with a different account
+
 Exit code: 0 completed, 1 needs attention / failed, 2 paused (resume later), 3 usage or setup error.
 """
 
@@ -29,6 +35,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--resume", metavar="PROJECT_ID", help="continue a paused, failed or interrupted project")
     p.add_argument("--list", action="store_true", help="list existing projects")
     p.add_argument("--models", action="store_true", help="show which models are usable and why others are not")
+    p.add_argument("--accounts", action="store_true", help="show which subscription accounts (claude/codex) are logged in")
+    p.add_argument("--login", choices=["claude", "codex"], help="sign in to a Claude or ChatGPT subscription account")
+    p.add_argument("--logout", choices=["claude", "codex", "all"], help="sign out of a subscription account")
+    p.add_argument("--switch", choices=["claude", "codex"], help="sign out, then sign in with a different account")
+    p.add_argument("--device-auth", action="store_true",
+                   help="with --login/--switch codex: use a device code (for SSH/headless machines)")
     mode = p.add_mutually_exclusive_group()
     mode.add_argument("--direct", action="store_true", help="use one model, no benchmark and no second reviewer")
     mode.add_argument("--orchestrate", action="store_true", help="always benchmark and use an independent reviewer")
@@ -41,6 +53,27 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+def handle_accounts(args) -> int:
+    """--accounts / --login / --logout / --switch: manage the CLI subscription logins."""
+    from models import cli_common as cc
+
+    rc = 0
+    if args.switch:
+        rc = cc.switch_account(args.switch, device_auth=args.device_auth)
+    elif args.login:
+        rc = cc.login(args.login, device_auth=args.device_auth)
+    elif args.logout:
+        for name in (list(cc.CLI_PROVIDERS) if args.logout == "all" else [args.logout]):
+            rc = cc.logout(name) or rc
+
+    print()
+    for name, spec in cc.CLI_PROVIDERS.items():
+        st = cc.auth_status(name, use_cache=False)
+        state = "logged in" if st.logged_in else "NOT logged in"
+        print(f"  {name:7} {state:14} {st.detail}")
+    return 0 if rc == 0 else 3
+
+
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
 
@@ -49,6 +82,10 @@ def main(argv=None) -> int:
     from core.orchestrator import build_orchestrator
 
     setup_logging(args.log_level)
+
+    if args.accounts or args.login or args.logout or args.switch:
+        return handle_accounts(args)
+
     try:
         settings = load_settings(args.config)
     except Exception as exc:
@@ -82,7 +119,8 @@ def main(argv=None) -> int:
         return 0
 
     if not orch.registry.ids():
-        print("No model is usable. Add API keys to .env (see .env.example) or start a local model.", file=sys.stderr)
+        print("No model is usable. Log in (python main.py --login claude|codex), add API keys to .env, "
+              "or start a local model.", file=sys.stderr)
         for model_id, reason in orch.registry.skipped.items():
             print(f"  {model_id}: {reason}", file=sys.stderr)
         return 3

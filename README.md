@@ -54,5 +54,4 @@ Each module has a self-test: `PYTHONPATH=. python -m core.orchestrator` (also `c
 
 - Generated programs are only run if they are plain terminating Python scripts; GUIs, servers and programs needing
   input/arguments are never run automatically. Candidate code runs in subprocesses with a scrubbed environment.
-- Status: tested with scripted fake models against the real components; provider adapters have not been run against
-  the live APIs yet. Expect to tune prompts and model names on first real use.
+- For extensive documentation of this repository: https://rishiljalisatgi.netlify.app/documentation/multi-llm-orchestrator
